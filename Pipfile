@@ -1,0 +1,24 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+
+[packages]
+flask = "*"
+flask-restplus = "*"
+flask-sqlalchemy = "*"
+flask-marshmallow = "*"
+sqlalchemy = "*"
+marshmallow-sqlalchemy = "*"
+gunicorn = "*"
+healthcheck = "*"
+psycopg2-binary = "*"
+pyodbc = "*"
+comtypes = "*"
+pypyodbc = "*"
+
+[requires]
+python_version = "3.6"

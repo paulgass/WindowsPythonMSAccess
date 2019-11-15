@@ -1,0 +1,42 @@
+---
+openshift_cluster_content:
+- object: dev-stage
+  content:
+  - name: postgresql-dev-deploy
+    template: "{{ inventory_dir }}/../templates/postgresql-persistent.yml"
+    params_from_vars: "{{ database }}"
+    namespace: "{{ dev_namespace }}"
+    action: apply
+    tags:
+    - deploy
+    - dev-deploy
+    - dev-deploy-db
+  - name: app-dev-deploy
+    template: "{{ inventory_dir }}/../templates/deploy-brandi-candidate-service.yml"
+    params_from_vars: "{{ dev }}"
+    namespace: "{{ dev_namespace }}"
+    action: apply
+    tags:
+    - deploy
+    - dev-deploy
+    - dev-deploy-app
+- object: test-stage
+  content:
+  - name: postgresql-test-deploy
+    template: "{{ inventory_dir }}/../templates/postgresql-persistent.yml"
+    params_from_vars: "{{ database }}"
+    namespace: "{{ test_namespace }}"
+    action: apply
+    tags:
+    - deploy
+    - test-deploy
+    - test-deploy-db
+  - name: app-test-deploy
+    template: "{{ inventory_dir }}/../templates/deploy-brandi-candidate-service.yml"
+    params_from_vars: "{{ test }}"
+    namespace: "{{ test_namespace }}"
+    action: apply
+    tags:
+    - deploy
+    - test-deploy
+    - test-deploy-app

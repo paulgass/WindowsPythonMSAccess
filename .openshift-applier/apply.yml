@@ -1,0 +1,29 @@
+---
+- name: Build and Deploy Flask REST Application
+  hosts: seed-hosts
+  vars:
+    app_name: brandi-candidate-service
+    ci_cd_namespace: brandi-ci-cd
+    dev_namespace: brandi-dev
+    test_namespace: brandi-test
+    database:
+      APP_NAME: "{{ app_name }}"
+      DATABASE_SERVICE_NAME: "{{ app_name }}-postgresql"
+      POSTGRESQL_DATABASE: "brandidb"
+      POSTGRESQL_USER: "brandiuser"
+      POSTGRESQL_PASSWORD: "brandipassword"
+    build:
+      NAME: "{{app_name}}"
+      PIPELINE_SOURCE_REPOSITORY_URL: git@gitlab.agilesof.com:brandi-dev/brandi-candidate-service.git
+      PIPELINE_SOURCE_SECRET: ssh-private-key
+    dev:
+      NAME: "{{app_name}}"
+      APP_MODULE: "wsgi:application"
+      DATABASE_SECRET_NAME: "{{ app_name }}-postgresql"
+    test:
+      NAME: "{{app_name}}"
+      APP_MODULE: "wsgi:application"
+      DATABASE_SECRET_NAME: "{{ app_name }}-postgresql"
+  tasks:
+    - include_role:
+        name: openshift-applier/roles/openshift-applier

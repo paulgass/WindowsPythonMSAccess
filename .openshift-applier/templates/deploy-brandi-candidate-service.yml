@@ -1,0 +1,223 @@
+apiVersion: v1
+kind: Template
+labels:
+  app: "${NAME}"
+  template: brandi-candidate-service
+message: |-
+  The following service(s) have been created in your project: ${NAME}
+metadata:
+  annotations:
+    description: BRANDI candidate service
+    iconClass: icon-python
+    openshift.io/display-name: BRANDI candidate API
+    openshift.io/documentation-url: https://gitlab.agilesof.com/brandi-dev/brandi-candidate-service
+    openshift.io/long-description: This template Deploys the BRANDI candidate API
+    openshift.io/provider-display-name: SOCOM
+    openshift.io/support-url: https://gitlab.agilesof.com
+    tags: brandi,backend,api,ubi,python,flask
+    template.openshift.io/bindable: "false"
+  creationTimestamp: null
+  name: "${NAME}"
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      description: Defines how to deploy the application server
+      template.alpha.openshift.io/wait-for-ready: "true"
+    generation: 1
+    labels:
+      app: ${NAME}
+      template: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      name: ${NAME}
+    strategy:
+      activeDeadlineSeconds: 21600
+      recreateParams:
+        timeoutSeconds: 600
+      resources: {}
+      type: Recreate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: ${NAME}
+        name: ${NAME}
+      spec:
+        containers:
+        - env:
+          - name: DATABASE_ENGINE
+            value: ${DATABASE_ENGINE}
+          - name: BRANDI_DEBUG
+            value: ${BRANDI_DEBUG}
+          - name: BASE_BRANDI_HOST
+            value: ${BASE_BRANDI_HOST}
+          - name: BASE_NAMESPACE
+            value: ${BASE_NAMESPACE}
+          - name: DATABASE_SERVICE_NAME
+            valueFrom:
+              secretKeyRef:
+                key: database-service-name
+                name: ${DATABASE_SECRET_NAME}
+          - name: DATABASE_NAME
+            valueFrom:
+              secretKeyRef:
+                key: database-name
+                name: ${DATABASE_SECRET_NAME}
+          - name: DATABASE_USER
+            valueFrom:
+              secretKeyRef:
+                key: database-user
+                name: ${DATABASE_SECRET_NAME}
+          - name: DATABASE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: database-password
+                name: ${DATABASE_SECRET_NAME}
+          - name: APP_MODULE
+            value: ${APP_MODULE}
+          - name: FLASK_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                key: flask-secret-key
+                name: brandi-candidate-service
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 3
+          name: ${NAME}
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 3
+          resources:
+            limits:
+              memory: ${MEMORY_LIMIT}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${NAME}
+        from:
+          kind: ImageStreamTag
+          name: ${NAME}:latest
+          namespace: brandi-dev
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: ${NAME}
+  stringData:
+    flask-secret-key: ${FLASK_SECRET_KEY}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: Exposes and load balances the application pods
+      service.alpha.openshift.io/dependencies: '[{"name": "${DATABASE_SERVICE_NAME}",
+        "kind": "Service"}]'
+    name: ${NAME}
+  spec:
+    ports:
+    - name: web
+      port: 8080
+      targetPort: 8080
+    selector:
+      name: ${NAME}
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${NAME}
+  spec:
+    host: ${APPLICATION_DOMAIN}
+    to:
+      kind: Service
+      name: ${NAME}
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      description: Keeps track of changes in the application image
+    name: ${NAME}
+parameters:
+- description: The name assigned to all of the frontend objects defined in this template.
+  displayName: Name
+  name: NAME
+  required: true
+  value: flask-psql-persistent
+- description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  name: NAMESPACE
+  required: true
+  value: openshift
+- description: Maximum amount of memory the Django container can use.
+  displayName: Memory Limit
+  name: MEMORY_LIMIT
+  required: true
+  value: 512Mi
+- description: The exposed hostname that will route to the Django service, if left
+    blank a value will be defaulted.
+  displayName: Application Hostname
+  name: APPLICATION_DOMAIN
+- description: Relative path to Gunicorn configuration file (optional).
+  displayName: Application Configuration File Path
+  name: APP_MODULE
+  value: app.wsgi
+- description: Set this to a long random string.
+  displayName: Django Secret Key
+  from: '[\w]{50}'
+  generate: expression
+  name: FLASK_SECRET_KEY
+- description: 'The HOSTNAME in the URL'
+  displayName: HOSTNAME
+  name: BASE_BRANDI_HOST
+  required: false
+  value: ""
+- description: 'NAMESPACE in URL'
+  displayName: NAMESACE
+  name: BASE_NAMESPACE
+  required: false
+  value: ""
+- displayName: Database Secret Name
+  name: DATABASE_SECRET_NAME
+  required: true
+  value: postgresql-secret
+- description: 'Database engine: postgresql, mysql or sqlite (default).'
+  displayName: Database Engine
+  name: DATABASE_ENGINE
+  required: true
+  value: postgresql
+- description: 'Debugging enabled'
+  displayName: BRANDI_DEBUG
+  name: BRANDI_DEBUG
+  required: true
+  value: "True"
